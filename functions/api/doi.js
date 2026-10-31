@@ -35,7 +35,8 @@ function parsePubMed(xml) {
     volume: xmlField(article, "Volume"),
     issue: xmlField(article, "Issue"),
     pages: xmlField(article, "MedlinePgn"),
-    issn: xmlField(article, "ISSN")
+    issn: xmlField(article, "ISSN"),
+    language: xmlField(article, "Language")
   };
 }
 
@@ -62,6 +63,7 @@ async function crossref(doi) {
     issue: item.issue || "",
     pages: item.page || "",
     issn: item.ISSN?.[0] || "",
+    language: item.language || "",
     publisher: item.publisher || "",
     url: item.URL || ""
   };
@@ -121,7 +123,9 @@ export async function onRequestGet({ request }) {
     url: c.url || "https://doi.org/" + doi,
     abstract: p.abstract || c.abstract || "",
     abstractLanguage: p.abstract ? "en" : (c.abstract ? "en" : ""),
-    keywords: p.keywords?.length ? p.keywords : (c.keywords || []),
+    keywords: p.keywords || [],
+    crossrefSubjects: c.keywords || [],
+    language: p.language || c.language || "",
     sources: [pubmedData ? "PubMed" : "", crossrefData ? "Crossref" : ""].filter(Boolean),
     pmid: p.pmid || ""
   };
