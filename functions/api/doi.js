@@ -117,10 +117,14 @@ async function springerPage(doi) {
       const level = Number(heading[1]);
       const next = headings.slice(keywordHeading + 1).find(([, nextLevel]) => Number(nextLevel) <= level);
       const keywordSection = html.slice(start, next ? next.index : html.length);
-      const listTerms = [...keywordSection.matchAll(/<(?:li|dd)\\b[^>]*>([\\s\\S]*?)<\\/(?:li|dd)>/gi)]
+      const listMatch = keywordSection.match(/<(ul|ol)\\b[^>]*>([\\s\\S]*?)<\\/\\1>/i);
+      const listHtml = listMatch?.[2] || "";
+      const linkedTerms = [...listHtml.matchAll(/<a\\b[^>]*>([\\s\\S]*?)<\\/a>/gi)]
+        .map(([, value]) => xmlText(value)).filter(Boolean);
+      const listTerms = [...listHtml.matchAll(/<(?:li|dd)\\b[^>]*>([\\s\\S]*?)<\\/(?:li|dd)>/gi)]
         .map(([, value]) => xmlText(value)).filter(Boolean);
       const block = xmlText(keywordSection);
-      headingKeywords = listTerms.length ? listTerms : block.split(/[,;|]/).map(x => x.trim()).filter(Boolean);
+      headingKeywords = linkedTerms.length ? linkedTerms : listTerms.length ? listTerms : block.split(/[,;|]/).map(x => x.trim()).filter(Boolean);
     }
     const keywords = [...new Set([
       ...htmlMetaValues(html, "citation_keyword"),
