@@ -85,7 +85,7 @@ function parsePdfLanguages(text){
  for(const d of defs)for(const kind of ['summary','keywords'])for(const alias of d[kind])all.push({lang:d.lang,kind,alias});
  const labelPattern=all.map(x=>'(?:'+x.alias+')').join('|');
  const headingRe=new RegExp('(?:^|\\n)\\s*('+labelPattern+')\\s*(?::|：|[-–—])?\\s*','gim');
- const source=String(text||'').replace(/\\r/g,'\\n').replace(/\\u00a0/g,' ');
+ const source=String(text||'').replace(/\r/g,'\n').replace(/\u00a0/g,' ');
  const headings=[];
  let match;
  while((match=headingRe.exec(source))){
@@ -94,7 +94,7 @@ function parsePdfLanguages(text){
   if(found)headings.push({ ...found, start:headingRe.lastIndex, index:match.index });
   if(!match[0].length)headingRe.lastIndex++;
  }
- const majorHeadingRe=/(?:^|\\n)\\s*(?:\\d+(?:\\.\\d+)*\\s+)?(?:Introduction|Introdução|Introduccion|Introducción|Materials and Methods|Methods|Metodologia|Métodos|Métodos e materiais|Resultados|Results|Discussion|Discussão|Conclusion|Conclusão|References|Referências|Referencias|Bibliography|Bibliografia|Acknowledgments|Agradecimentos)\\b/gi;
+ const majorHeadingRe=/(?:^|\n)\s*(?:\d+(?:\.\d+)*\s+)?(?:Introduction|Introdução|Introduccion|Introducción|Materials and Methods|Methods|Metodologia|Métodos|Métodos e materiais|Resultados|Results|Discussion|Discussão|Conclusion|Conclusão|References|Referências|Referencias|Bibliography|Bibliografia|Acknowledgments|Agradecimentos)\b/gi;
  const major=[];
  while((match=majorHeadingRe.exec(source))){major.push(match.index);if(!match[0].length)majorHeadingRe.lastIndex++}
  const byLang=new Map();
@@ -110,8 +110,8 @@ function parsePdfLanguages(text){
   const row=byLang.get(h.lang)||{lang:h.lang,abstract:'',keywords:[]};
   if(h.kind==='summary'&&!row.abstract)row.abstract=value;
   if(h.kind==='keywords'&&!row.keywords.length){
-   const raw=value.replace(/\\n+/g,' ').replace(/[.\\s]+$/,'');
-   row.keywords=[...new Set(raw.split(/[;,，；|•·]+/).map(x=>x.trim().replace(/^[–—-]\\s*/,'').replace(/[.]+$/,'')).filter(Boolean))];
+   const raw=value.replace(/\n+/g,' ').replace(/[.\s]+$/,'');
+   row.keywords=[...new Set(raw.split(/[;,，；|•·]+/).map(x=>x.trim().replace(/^[–—-]\s*/,'').replace(/[.]+$/,'')).filter(Boolean))];
   }
   byLang.set(h.lang,row);
  }
