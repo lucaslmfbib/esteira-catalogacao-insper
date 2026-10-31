@@ -72,8 +72,25 @@ async function extractTextFromPdf(file){if(file._extractedPdfText)return file._e
 function cleanPdfText(s){return String(s||'').replace(/-\s*\n\s*/g,'').replace(/[\t\r ]+/g,' ').replace(/\n{2,}/g,'\n').trim()}
 function fieldBetween(text,start,end){const re=new RegExp(start+'\\s*([\\s\\S]*?)(?='+end+')','i');return (text.match(re)||[])[1]||''}
 function detectMainLanguage(text){const labels=[['pt',/\bResumo\b/i],['en',/\bAbstract\b/i],['es',/\bResumen\b/i]];let found=labels.map(x=>({lang:x[0],index:text.search(x[1])})).filter(x=>x.index>=0).sort((a,b)=>a.index-b.index);return found[0]?.lang||'und'}
-function parsePdfLanguages(text){const defs=[{lang:'pt',summary:'Resumo',keywords:'Palavras-chave'},{lang:'en',summary:'Abstract',keywords:'Keywords'},{lang:'es',summary:'Resumen',keywords:'Palabras clave'}],out=[];for(const d of defs){const sm=text.match(new RegExp('(?:^|\\n)\\s*'+d.summary+'\\s*\\n?([\\s\\S]*?)(?=\\b'+d.keywords+'\\s*:)', 'i'));const km=text.match(new RegExp('\\b'+d.keywords+'\\s*:\\s*([\\s\\S]*?)(?=\\b(?:Resumo|Abstract|Resumen)\\b|\\bDOI\\s*:|$)', 'i'));if(sm||km){let abstract=cleanPdfText(sm?.[1]||'');let keywords=cleanPdfText(km?.[1]||'').replace(/[.\s]+$/,'').split(/[;；]/).map(x=>x.trim().replace(/[.]+$/,'')).filter(Boolean);out.push({lang:d.lang,abstract,keywords})}}return out}
-function parsePdfTitles(firstPage,mainLang){let lines=firstPage.split(/\n+/).map(x=>x.trim()).filter(Boolean);let a=lines.findIndex(x=>/^(?:Autores|Authors|Autoras)\s*:/i.test(x));if(a<0)return{title:'',alt:[]};let b=lines.findIndex(x=>/^(?:Artigo Original|Original Article|Artículo Original)\b/i.test(x));let block=lines.slice(b>=0?b+1:0,a).filter(x=>!/^\s*(?:Aula em Sala Híbrida|Hybrid Classroom|Clase en Aula Híbrida)\s*$/i.test(x));let groups=[];for(const line of block){if(!groups.length||/^[\p{Lu}¿]/u.test(line))groups.push(line);else groups[groups.length-1]+=' '+line}groups=groups.map(x=>x.replace(/\s+/g,' ').trim()).filter(x=>x.length>8);const langOf=t=>/\b(?:Hybrid Classroom|both worlds)\b/i.test(t)?'en':/\b(?:Clase en Aula|ambos mundos)\b/i.test(t)?'es':/\b(?:Aula em Sala|dos dois mundos)\b/i.test(t)?'pt':'und';const main=groups.find(x=>langOf(x)===mainLang)||groups[0]||'';return{title:main,alt:groups.filter(x=>x!==main).map(x=>({lang:langOf(x),value:x}))}}
+function parsePdfLanguages(text){
+ const defs=[
+  {lang:'pt',summary:'Resumo',keywords:'Palavras[- ]chave'},
+  {lang:'en',summary:'Abstract',keywords:'(?:Keywords?|Key words?)'},
+  {lang:'es',summary:'Resumen',keywords:'Palabras clave'}
+ ],out=[],allSummaries='Resumo|Abstract|Resumen',sectionEnd='(?:'+allSummaries+'|Introduction|Introdução|Introduccion|References|Referências|Referencias|Bibliography|Bibliografia)';
+ for(const d of defs){
+  const summaryRe=new RegExp('(?:^|\\n)\\s*'+d.summary+'\\s*[:：]?\\s*([\\s\\S]*?)(?=\\n\\s*(?:'+d.keywords+'|'+sectionEnd+')\\b|$)','i');
+  const keywordRe=new RegExp('(?:^|\\n)\\s*'+d.keywords+'\\s*[:：-]?\\s*([\\s\\S]*?)(?=\\n\\s*'+sectionEnd+'\\b|$)','i');
+  const sm=text.match(summaryRe),km=text.match(keywordRe);
+  if(sm||km){
+   const abstract=cleanPdfText(sm?.[1]||'');
+   const raw=cleanPdfText(km?.[1]||'').replace(/[.\\s]+$/,'');
+   const keywords=raw.split(/[;；\\n]|,(?=\\s*(?:[A-ZÀ-Ý0-9]|[a-zà-ÿ]))/).map(x=>x.trim().replace(/^[•·-]\\s*/,'').replace(/[.]+$/,'')).filter(Boolean);
+   out.push({lang:d.lang,abstract,keywords:[...new Set(keywords)]});
+  }
+ }
+ return out
+}function parsePdfTitles(firstPage,mainLang){let lines=firstPage.split(/\n+/).map(x=>x.trim()).filter(Boolean);let a=lines.findIndex(x=>/^(?:Autores|Authors|Autoras)\s*:/i.test(x));if(a<0)return{title:'',alt:[]};let b=lines.findIndex(x=>/^(?:Artigo Original|Original Article|Artículo Original)\b/i.test(x));let block=lines.slice(b>=0?b+1:0,a).filter(x=>!/^\s*(?:Aula em Sala Híbrida|Hybrid Classroom|Clase en Aula Híbrida)\s*$/i.test(x));let groups=[];for(const line of block){if(!groups.length||/^[\p{Lu}¿]/u.test(line))groups.push(line);else groups[groups.length-1]+=' '+line}groups=groups.map(x=>x.replace(/\s+/g,' ').trim()).filter(x=>x.length>8);const langOf=t=>/\b(?:Hybrid Classroom|both worlds)\b/i.test(t)?'en':/\b(?:Clase en Aula|ambos mundos)\b/i.test(t)?'es':/\b(?:Aula em Sala|dos dois mundos)\b/i.test(t)?'pt':'und';const main=groups.find(x=>langOf(x)===mainLang)||groups[0]||'';return{title:main,alt:groups.filter(x=>x!==main).map(x=>({lang:langOf(x),value:x}))}}
 const CNPQ_RULES=[
 {code:'4.00.00.00-1',name:'Ciências da Saúde',path:'4.00.00.00-1 Ciências da Saúde',terms:['health','saúde','clinical','clínica','patient','paciente','hospital','medical','médic','symptom','sintoma'],min:1},
 {code:'4.07.00.00-3',name:'Fonoaudiologia',path:'4.00.00.00-1 Ciências da Saúde > 4.07.00.00-3 Fonoaudiologia',terms:['fonoaudi','speech language','speech-language','voice','vocal','throat','larynx','laryngeal','voice handicap','vhi','voz','garganta','laringe','disfonia'],min:1},
