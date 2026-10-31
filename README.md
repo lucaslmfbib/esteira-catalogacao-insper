@@ -11,6 +11,13 @@ Aplicação estática que prepara metadados e arquivos para importação em lote
 
 Este repositório é público. O site publicado também fica acessível publicamente por padrão; configure Cloudflare Access na conta Cloudflare se quiser restringir quem pode acessá-lo. A aplicação não envia arquivos ou metadados para um servidor: cada usuário gera o ZIP SAF no próprio navegador.
 
+## Fluxo de entrada por PDF
+
+1. Selecione os PDFs em **Começar pelos PDFs** e clique em **Ler PDFs e criar registros**.
+2. Arquivos com o mesmo DOI são agrupados no mesmo registro e os campos multilíngues são preparados para revisão.
+3. Arquivos sem DOI ficam em registros separados para evitar reunir obras diferentes por engano.
+4. Revise a coleção, os metadados extraídos e as sugestões CNPq antes de gerar o ZIP. A planilha continua disponível como fluxo alternativo.
+
 ## Limitações
 
 - Os PDFs precisam ser anexados pelo usuário; a aplicação não os baixa dos URLs de origem.
