@@ -85,7 +85,7 @@ function parsePdfLanguages(text){
  for(const d of defs)for(const kind of ['summary','keywords'])for(const alias of d[kind])all.push({lang:d.lang,kind,alias});
  const labelPattern=all.map(x=>'(?:'+x.alias+')').join('|');
  const headingRe=new RegExp('(?:^|\\n)\\s*('+labelPattern+')\\s*(?::|：|[-–—])?\\s*','gim');
- const source=String(text||'').replace(/\\r/g,'\\n').replace(/\\u00a0/g,' ');
+ const source=String(text||'').replace(/\r/g,'\n').replace(/\u00a0/g,' ');
  const headings=[];
  let match;
  while((match=headingRe.exec(source))){
@@ -94,7 +94,7 @@ function parsePdfLanguages(text){
   if(found)headings.push({ ...found, start:headingRe.lastIndex, index:match.index });
   if(!match[0].length)headingRe.lastIndex++;
  }
- const majorHeadingRe=/(?:^|\\n)\\s*(?:\\d+(?:\\.\\d+)*\\s+)?(?:Introduction|Introdução|Introduccion|Introducción|Materials and Methods|Methods|Metodologia|Métodos|Métodos e materiais|Resultados|Results|Discussion|Discussão|Conclusion|Conclusão|References|Referências|Referencias|Bibliography|Bibliografia|Acknowledgments|Agradecimentos)\\b/gi;
+ const majorHeadingRe=/(?:^|\n)\s*(?:\d+(?:\.\d+)*\s+)?(?:Introduction|Introdução|Introduccion|Introducción|Materials and Methods|Methods|Metodologia|Métodos|Métodos e materiais|Resultados|Results|Discussion|Discussão|Conclusion|Conclusão|References|Referências|Referencias|Bibliography|Bibliografia|Acknowledgments|Agradecimentos)\b/gi;
  const major=[];
  while((match=majorHeadingRe.exec(source))){major.push(match.index);if(!match[0].length)majorHeadingRe.lastIndex++}
  const byLang=new Map();
@@ -111,15 +111,15 @@ function parsePdfLanguages(text){
   if(h.kind==='summary'&&!row.abstract)row.abstract=value;
   if(h.kind==='keywords'&&!row.keywords.length){
    let raw=rawSource
-    .split(/\\bDOI\\s*:/i)[0]
-    .split(/https?:\\/\\/|dx\\.doi\\.org\\/|10\\.\\d{4,9}\\//i)[0]
-    .split(/\\b(?:ET\\s+AL\\.|Rev\\.\\s*Bras\\.|References?|Referências|Referencias|Bibliography|Bibliografia)\\b/i)[0]
-    .replace(/(?:^|\\n)\\s*\\d{1,4}\\s*$/gm,' ')
-    .replace(/\\s+/g,' ')
+    .split(/\bDOI\s*:/i)[0]
+    .split(/https?:\/\/|dx\.doi\.org\/|10\.\d{4,9}\//i)[0]
+    .split(/\b(?:ET\s+AL\.|Rev\.\s*Bras\.|References?|Referências|Referencias|Bibliography|Bibliografia)\b/i)[0]
+    .replace(/(?:^|\n)\s*\d{1,4}\s*$/gm,' ')
+    .replace(/\s+/g,' ')
     .trim();
    const terms=raw.split(/[;,，；|•·]+/)
-    .map(x=>x.trim().replace(/^[–—-]\\s*/,'').replace(/[.\\s]+$/,''))
-    .filter(x=>x.length>1&&x.length<=100&&!/\\b(?:doi|et al\\.?|rev\\. bras\\.|http)\\b/i.test(x));
+    .map(x=>x.trim().replace(/^[–—-]\s*/,'').replace(/[.\s]+$/,''))
+    .filter(x=>x.length>1&&x.length<=100&&!/\b(?:doi|et al\.?|rev\. bras\.|http)\b/i.test(x));
    row.keywords=[...new Set(terms)].slice(0,15);
   }
   byLang.set(h.lang,row);
