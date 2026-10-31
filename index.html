@@ -74,22 +74,48 @@ function fieldBetween(text,start,end){const re=new RegExp(start+'\\s*([\\s\\S]*?
 function detectMainLanguage(text){const labels=[['pt',/\bResumo\b/i],['en',/\bAbstract\b/i],['es',/\bResumen\b/i]];let found=labels.map(x=>({lang:x[0],index:text.search(x[1])})).filter(x=>x.index>=0).sort((a,b)=>a.index-b.index);return found[0]?.lang||'und'}
 function parsePdfLanguages(text){
  const defs=[
-  {lang:'pt',summary:'Resumo',keywords:'Palavras[- ]chave'},
-  {lang:'en',summary:'Abstract',keywords:'(?:Keywords?|Key words?)'},
-  {lang:'es',summary:'Resumen',keywords:'Palabras clave'}
- ],out=[],allSummaries='Resumo|Abstract|Resumen',sectionEnd='(?:'+allSummaries+'|Introduction|Introdução|Introduccion|References|Referências|Referencias|Bibliography|Bibliografia)';
- for(const d of defs){
-  const summaryRe=new RegExp('(?:^|\\n)\\s*'+d.summary+'\\s*[:：]?\\s*([\\s\\S]*?)(?=\\n\\s*(?:'+d.keywords+'|'+sectionEnd+')\\b|$)','i');
-  const keywordRe=new RegExp('(?:^|\\n)\\s*'+d.keywords+'\\s*[:：-]?\\s*([\\s\\S]*?)(?=\\n\\s*'+sectionEnd+'\\b|$)','i');
-  const sm=text.match(summaryRe),km=text.match(keywordRe);
-  if(sm||km){
-   const abstract=cleanPdfText(sm?.[1]||'');
-   const raw=cleanPdfText(km?.[1]||'').replace(/[.\\s]+$/,'');
-   const keywords=raw.split(/[;；\n]|,(?=\s*(?:[A-ZÀ-Ý0-9]|[a-zà-ÿ]))/).map(x=>x.trim().replace(/^[•·-]\s*/,'').replace(/[.]+$/,'')).filter(Boolean);
-   out.push({lang:d.lang,abstract,keywords:[...new Set(keywords)]});
-  }
+  {lang:'pt',summary:['Resumo'],keywords:['Palavras[- ]chave','Termos[- ]chave']},
+  {lang:'en',summary:['Abstract'],keywords:['Keywords?','Key\\s*words?','Index\\s*terms?']},
+  {lang:'es',summary:['Resumen'],keywords:['Palabras\\s+clave','Términos\\s+clave']},
+  {lang:'fr',summary:['Résumé','Resume','Abstract'],keywords:['Mots[- ]clés','Mots[- ]cles']},
+  {lang:'de',summary:['Zusammenfassung','Abstract'],keywords:['Schlüsselwörter','Schluesselwoerter','Keywords?']},
+  {lang:'it',summary:['Riassunto','Abstract'],keywords:['Parole\\s+chiave','Keywords?']}
+ ];
+ const all=[];
+ for(const d of defs)for(const kind of ['summary','keywords'])for(const alias of d[kind])all.push({lang:d.lang,kind,alias});
+ const labelPattern=all.map(x=>'(?:'+x.alias+')').join('|');
+ const headingRe=new RegExp('(?:^|\\n)\\s*('+labelPattern+')\\s*(?::|：|[-–—])?\\s*','gim');
+ const source=String(text||'').replace(/\\r/g,'\\n').replace(/\\u00a0/g,' ');
+ const headings=[];
+ let match;
+ while((match=headingRe.exec(source))){
+  const label=match[1];
+  const found=all.find(x=>new RegExp('^(?:'+x.alias+')$','i').test(label));
+  if(found)headings.push({ ...found, start:headingRe.lastIndex, index:match.index });
+  if(!match[0].length)headingRe.lastIndex++;
  }
- return out
+ const majorHeadingRe=/(?:^|\\n)\\s*(?:\\d+(?:\\.\\d+)*\\s+)?(?:Introduction|Introdução|Introduccion|Introducción|Materials and Methods|Methods|Metodologia|Métodos|Métodos e materiais|Resultados|Results|Discussion|Discussão|Conclusion|Conclusão|References|Referências|Referencias|Bibliography|Bibliografia|Acknowledgments|Agradecimentos)\\b/gi;
+ const major=[];
+ while((match=majorHeadingRe.exec(source))){major.push(match.index);if(!match[0].length)majorHeadingRe.lastIndex++}
+ const byLang=new Map();
+ for(let i=0;i<headings.length;i++){
+  const h=headings[i];
+  let end=source.length;
+  for(let j=i+1;j<headings.length;j++){end=Math.min(end,headings[j].index);break}
+  for(const pos of major)if(pos>h.start){end=Math.min(end,pos);break}
+  const max=h.kind==='summary'?12000:1600;
+  end=Math.min(end,h.start+max);
+  const value=cleanPdfText(source.slice(h.start,end));
+  if(!value)continue;
+  const row=byLang.get(h.lang)||{lang:h.lang,abstract:'',keywords:[]};
+  if(h.kind==='summary'&&!row.abstract)row.abstract=value;
+  if(h.kind==='keywords'&&!row.keywords.length){
+   const raw=value.replace(/\\n+/g,' ').replace(/[.\\s]+$/,'');
+   row.keywords=[...new Set(raw.split(/[;,，；|•·]+/).map(x=>x.trim().replace(/^[–—-]\\s*/,'').replace(/[.]+$/,'')).filter(Boolean))];
+  }
+  byLang.set(h.lang,row);
+ }
+ return [...byLang.values()]
 }function parsePdfTitles(firstPage,mainLang){let lines=firstPage.split(/\n+/).map(x=>x.trim()).filter(Boolean);let a=lines.findIndex(x=>/^(?:Autores|Authors|Autoras)\s*:/i.test(x));if(a<0)return{title:'',alt:[]};let b=lines.findIndex(x=>/^(?:Artigo Original|Original Article|Artículo Original)\b/i.test(x));let block=lines.slice(b>=0?b+1:0,a).filter(x=>!/^\s*(?:Aula em Sala Híbrida|Hybrid Classroom|Clase en Aula Híbrida)\s*$/i.test(x));let groups=[];for(const line of block){if(!groups.length||/^[\p{Lu}¿]/u.test(line))groups.push(line);else groups[groups.length-1]+=' '+line}groups=groups.map(x=>x.replace(/\s+/g,' ').trim()).filter(x=>x.length>8);const langOf=t=>/\b(?:Hybrid Classroom|both worlds)\b/i.test(t)?'en':/\b(?:Clase en Aula|ambos mundos)\b/i.test(t)?'es':/\b(?:Aula em Sala|dos dois mundos)\b/i.test(t)?'pt':'und';const main=groups.find(x=>langOf(x)===mainLang)||groups[0]||'';return{title:main,alt:groups.filter(x=>x!==main).map(x=>({lang:langOf(x),value:x}))}}
 const CNPQ_RULES=[
 {code:'4.00.00.00-1',name:'Ciências da Saúde',path:'4.00.00.00-1 Ciências da Saúde',terms:['health','saúde','clinical','clínica','patient','paciente','hospital','medical','médic','symptom','sintoma'],min:1},
