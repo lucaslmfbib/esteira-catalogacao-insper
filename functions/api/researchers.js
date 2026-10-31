@@ -78,7 +78,7 @@ export async function onRequestGet() {
   const unique = new Map();
   for (const profile of [...profiles, ...VERIFIED_FALLBACKS]) {
     const key = normalizedName(profile.name);
-    if (key && !unique.has(key)) unique.set(key, profile);
+    if (key) {\n      const prior = unique.get(key);\n      unique.set(key, prior ? { ...profile, ...prior, uuid: prior.uuid || profile.uuid, handle: prior.handle || profile.handle, orcid: prior.orcid || profile.orcid } : profile);\n    }
   }
   const merged = [...unique.values()];
   if (!merged.length) {
