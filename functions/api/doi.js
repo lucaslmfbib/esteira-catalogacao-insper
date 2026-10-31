@@ -65,6 +65,7 @@ async function crossref(doi) {
     issn: item.ISSN?.[0] || "",
     language: item.language || "",
     publisher: item.publisher || "",
+    series: item["series-title"] || "",
     url: item.URL || ""
   };
 }
@@ -120,6 +121,7 @@ export async function onRequestGet({ request }) {
     pages: p.pages || c.pages || "",
     issn: p.issn || c.issn || "",
     publisher: c.publisher || "",
+    series: c.series || "",
     url: c.url || "https://doi.org/" + doi,
     abstract: p.abstract || c.abstract || "",
     abstractLanguage: p.abstract ? "en" : (c.abstract ? "en" : ""),
