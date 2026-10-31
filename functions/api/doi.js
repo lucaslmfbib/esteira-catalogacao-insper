@@ -98,7 +98,8 @@ async function springerPage(doi) {
       const start = heading.index + heading[0].length;
       const level = Number(heading[1]);
       const next = headings.slice(index + 1).find(([, nextLevel]) => Number(nextLevel) <= level);
-      abstract = xmlText(html.slice(start, next ? next.index : html.length));
+      const abstractHtml = html.slice(start, next ? next.index : html.length).split(/This is a preview of subscription content/i)[0];
+      abstract = xmlText(abstractHtml);
     }
     if (abstract.length < 200) abstract = htmlMetaValues(html, "citation_abstract").find(value => value.length > 200) || abstract;
     if (abstract.length < 200) abstract = htmlMetaValues(html, "description").find(value => value.length > 300) || abstract;
