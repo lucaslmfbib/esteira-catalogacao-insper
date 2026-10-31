@@ -117,11 +117,11 @@ async function springerPage(doi) {
       const level = Number(heading[1]);
       const next = headings.slice(keywordHeading + 1).find(([, nextLevel]) => Number(nextLevel) <= level);
       const keywordSection = html.slice(start, next ? next.index : html.length);
-      const listMatch = keywordSection.match(/<(ul|ol)\\b[^>]*>([\\s\\S]*?)<\\/\\1>/i);
+      const listMatch = keywordSection.match(/<(ul|ol)\b[^>]*>([\s\S]*?)<\/\1>/i);
       const listHtml = listMatch?.[2] || "";
-      const linkedTerms = [...listHtml.matchAll(/<a\\b[^>]*>([\\s\\S]*?)<\\/a>/gi)]
+      const linkedTerms = [...listHtml.matchAll(/<a\b[^>]*>([\s\S]*?)<\/a>/gi)]
         .map(([, value]) => xmlText(value)).filter(Boolean);
-      const listTerms = [...listHtml.matchAll(/<(?:li|dd)\\b[^>]*>([\\s\\S]*?)<\\/(?:li|dd)>/gi)]
+      const listTerms = [...listHtml.matchAll(/<(?:li|dd)\b[^>]*>([\s\S]*?)<\/(?:li|dd)>/gi)]
         .map(([, value]) => xmlText(value)).filter(Boolean);
       const block = xmlText(keywordSection);
       headingKeywords = linkedTerms.length ? linkedTerms : listTerms.length ? listTerms : block.split(/[,;|]/).map(x => x.trim()).filter(Boolean);
