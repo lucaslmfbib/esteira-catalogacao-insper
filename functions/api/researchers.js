@@ -25,7 +25,7 @@ export async function onRequestGet() {
         if (!response.ok) throw new Error("DSpace respondeu HTTP " + response.status);
 
         const data = await response.json();
-        const result = data?._embedded?.searchResult;
+        const result = data?._embedded?.searchResults || data?._embedded?.searchResult;
         const objects = result?._embedded?.objects || [];
         for (const hit of objects) {
           const item = hit?._embedded?.indexableObject || {};
@@ -38,7 +38,7 @@ export async function onRequestGet() {
         }
 
         totalPages = Number(result?.page?.totalPages || data?.page?.totalPages || 1);
-        if (!objects.length || !data?._links?.next) break;
+        if (!objects.length || !result?._links?.next) break;
         page += 1;
       }
 
