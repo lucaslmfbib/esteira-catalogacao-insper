@@ -77,9 +77,9 @@ function parsePdfLanguages(text){
   {lang:'pt',summary:['Resumo'],keywords:['Palavras[- ]chave','Termos[- ]chave']},
   {lang:'en',summary:['Abstract'],keywords:['Keywords?','Key\\s*words?','Index\\s*terms?']},
   {lang:'es',summary:['Resumen'],keywords:['Palabras\\s+clave','Términos\\s+clave']},
-  {lang:'fr',summary:['Résumé','Resume','Abstract'],keywords:['Mots[- ]clés','Mots[- ]cles']},
-  {lang:'de',summary:['Zusammenfassung','Abstract'],keywords:['Schlüsselwörter','Schluesselwoerter','Keywords?']},
-  {lang:'it',summary:['Riassunto','Abstract'],keywords:['Parole\\s+chiave','Keywords?']}
+  {lang:'fr',summary:['Résumé','Resume'],keywords:['Mots[- ]clés','Mots[- ]cles']},
+  {lang:'de',summary:['Zusammenfassung'],keywords:['Schlüsselwörter','Schluesselwoerter','Keywords?']},
+  {lang:'it',summary:['Riassunto'],keywords:['Parole\\s+chiave','Keywords?']}
  ];
  const all=[];
  for(const d of defs)for(const kind of ['summary','keywords'])for(const alias of d[kind])all.push({lang:d.lang,kind,alias});
