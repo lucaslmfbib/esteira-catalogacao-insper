@@ -14,6 +14,8 @@ Este repositório é público. O site publicado também fica acessível publicam
 ## Limitações
 
 - Os PDFs precisam ser anexados pelo usuário; a aplicação não os baixa dos URLs de origem.
-- As áreas CNPq precisam ser informadas e conferidas.
+- O navegador pode extrair texto dos PDFs e sugerir metadados multilíngues; revise os campos antes da exportação. PDFs digitalizados sem camada de texto não são lidos por OCR.
+- A leitura usa PDF.js carregado de CDN, mas o conteúdo dos PDFs é processado no navegador e não é enviado à CDN.
+- As sugestões CNPq são preliminares, baseadas em correspondências locais de palavras, e devem ser conferidas na tabela oficial e no vocabulário do DSpace. A validação da plataforma não certifica a pertinência da classificação.
 - A associação de pesquisadores Insper pela lupa continua sendo feita no DSpace.
 - O rascunho local guarda metadados no navegador atual, mas não guarda PDFs.
