@@ -99,6 +99,6 @@ export async function onRequestGet() {
       dspaceUnavailable: !profiles.length,
       detail: lastError
     },
-    { headers: { "Cache-Control": "public, max-age=3600, s-maxage=86400" } }
+    { headers: { "Cache-Control": "no-store, max-age=0" } }
   );
 }
