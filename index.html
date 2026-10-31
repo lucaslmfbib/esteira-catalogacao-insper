@@ -85,7 +85,7 @@ function parsePdfLanguages(text){
   if(sm||km){
    const abstract=cleanPdfText(sm?.[1]||'');
    const raw=cleanPdfText(km?.[1]||'').replace(/[.\\s]+$/,'');
-   const keywords=raw.split(/[;；\\n]|,(?=\\s*(?:[A-ZÀ-Ý0-9]|[a-zà-ÿ]))/).map(x=>x.trim().replace(/^[•·-]\\s*/,'').replace(/[.]+$/,'')).filter(Boolean);
+   const keywords=raw.split(/[;；\n]|,(?=\s*(?:[A-ZÀ-Ý0-9]|[a-zà-ÿ]))/).map(x=>x.trim().replace(/^[•·-]\s*/,'').replace(/[.]+$/,'')).filter(Boolean);
    out.push({lang:d.lang,abstract,keywords:[...new Set(keywords)]});
   }
  }
