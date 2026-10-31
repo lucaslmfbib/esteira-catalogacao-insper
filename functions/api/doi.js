@@ -90,19 +90,18 @@ async function springerPage(doi) {
     });
     if (!response.ok) return null;
     const html = await response.text();
-    let abstract = htmlMetaValues(html, "citation_abstract")[0] || "";
-    if (!abstract) {
-      const headings = [...html.matchAll(/<h([1-6])\b[^>]*>([\s\S]*?)<\/h\1>/gi)];
-      const index = headings.findIndex(([, level, content]) => xmlText(content).toLowerCase() === "abstract");
-      if (index >= 0) {
-        const heading = headings[index];
-        const start = heading.index + heading[0].length;
-        const level = Number(heading[1]);
-        const next = headings.slice(index + 1).find(([match, nextLevel]) => Number(nextLevel) <= level);
-        abstract = xmlText(html.slice(start, next ? next.index : html.length));
-      }
+    let abstract = "";
+    const headings = [...html.matchAll(/<h([1-6])\b[^>]*>([\s\S]*?)<\/h\1>/gi)];
+    const index = headings.findIndex(([, level, content]) => xmlText(content).toLowerCase() === "abstract");
+    if (index >= 0) {
+      const heading = headings[index];
+      const start = heading.index + heading[0].length;
+      const level = Number(heading[1]);
+      const next = headings.slice(index + 1).find(([, nextLevel]) => Number(nextLevel) <= level);
+      abstract = xmlText(html.slice(start, next ? next.index : html.length));
     }
-    if (!abstract) abstract = htmlMetaValues(html, "description").find(value => value.length > 300) || "";
+    if (abstract.length < 200) abstract = htmlMetaValues(html, "citation_abstract").find(value => value.length > 200) || abstract;
+    if (abstract.length < 200) abstract = htmlMetaValues(html, "description").find(value => value.length > 300) || abstract;
     const keywords = [...new Set([
       ...htmlMetaValues(html, "citation_keyword"),
       ...htmlMetaValues(html, "citation_keywords")
