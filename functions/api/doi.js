@@ -70,6 +70,43 @@ async function crossref(doi) {
   };
 }
 
+function htmlMetaValues(html, name) {
+  return [...String(html || "").matchAll(/<meta\b[^>]*>/gi)]
+    .map(([tag]) => {
+      const key = tag.match(/\b(?:name|property)\s*=\s*(?:"([^"]*)"|'([^']*)')/i);
+      const content = tag.match(/\bcontent\s*=\s*(?:"([^"]*)"|'([^']*)')/i);
+      return key && content && (key[1] || key[2] || "").toLowerCase() === name.toLowerCase()
+        ? xmlText(content[1] || content[2] || "")
+        : "";
+    }).filter(Boolean);
+}
+
+async function springerPage(doi) {
+  if (!String(doi).startsWith("10.1007/")) return null;
+  try {
+    const response = await fetch("https://link.springer.com/article/" + doi, {
+      headers: { Accept: "text/html", "User-Agent": "EsteiraCatalogacaoInsper/1.0" },
+      cf: { cacheTtl: 86400, cacheEverything: true }
+    });
+    if (!response.ok) return null;
+    const html = await response.text();
+    let abstract = htmlMetaValues(html, "citation_abstract")[0] || "";
+    if (!abstract) {
+      const blocks = [...html.matchAll(/<section\b[\s\S]*?<\/section>/gi)].map(([, block]) => block);
+      const block = blocks.find(value => /<h[1-6]\b[^>]*>\s*Abstract\s*<\/h[1-6]>/i.test(value));
+      if (block) abstract = xmlText(block);
+    }
+    if (!abstract) abstract = htmlMetaValues(html, "description").find(value => value.length > 120) || "";
+    const keywords = [...new Set([
+      ...htmlMetaValues(html, "citation_keyword"),
+      ...htmlMetaValues(html, "citation_keywords")
+    ].flatMap(value => value.split(/[,;|]/).map(x => x.trim()).filter(Boolean)))];
+    return { abstract: abstract.length > 100 ? abstract : "", keywords };
+  } catch {
+    return null;
+  }
+}
+
 async function pubmed(doi) {
   const search = new URL("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi");
   search.searchParams.set("db", "pubmed");
@@ -109,6 +146,7 @@ export async function onRequestGet({ request }) {
   }
   const c = crossrefData || {};
   const p = pubmedData || {};
+  const springerData = (!p.abstract && !c.abstract) ? await springerPage(doi) : null;
   const authors = p.authors?.length ? p.authors : (c.authors || []);
   const metadata = {
     doi,
@@ -123,12 +161,12 @@ export async function onRequestGet({ request }) {
     publisher: c.publisher || "",
     series: c.series || "",
     url: c.url || "https://doi.org/" + doi,
-    abstract: p.abstract || c.abstract || "",
-    abstractLanguage: p.abstract ? "en" : (c.abstract ? "en" : ""),
-    keywords: p.keywords || [],
+    abstract: p.abstract || c.abstract || springerData?.abstract || "",
+    abstractLanguage: p.abstract || c.abstract || springerData?.abstract ? "en" : "",
+    keywords: (p.keywords || []).length ? p.keywords : (springerData?.keywords || []),
     crossrefSubjects: c.keywords || [],
     language: p.language || c.language || "",
-    sources: [pubmedData ? "PubMed" : "", crossrefData ? "Crossref" : ""].filter(Boolean),
+    sources: [pubmedData ? "PubMed" : "", crossrefData ? "Crossref" : "", springerData?.abstract ? "Springer Nature" : ""].filter(Boolean),
     pmid: p.pmid || ""
   };
   return Response.json(
