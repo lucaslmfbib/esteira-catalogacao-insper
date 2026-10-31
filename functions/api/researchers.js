@@ -7,7 +7,7 @@ const VERIFIED_FALLBACK_NAMES = ["JARED PARKER SCRUGGS","LUIZA RIBEIRO ALVES CUN
 const VERIFIED_FALLBACKS = VERIFIED_FALLBACK_NAMES.map((name) => ({
   name,
   uuid: "",
-  orcid: name.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase() === "clio nudel radomysler" ? "0000-0003-3879-2421" : "",
+  orcid: name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() === "clio nudel radomysler" ? "0000-0003-3879-2421" : "",
   handle: "",
   source: "lista de pesquisadores Insper enviada pelo usuário"
 }));
