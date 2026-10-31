@@ -1,3 +1,9 @@
+function normalizeLanguage(value) {
+  const raw = String(value || "").trim().toLowerCase().split(/[-_]/)[0];
+  const codes = { por: "pt", eng: "en", spa: "es", fre: "fr", fra: "fr", ger: "de", deu: "de", ita: "it" };
+  return codes[raw] || (/^(pt|en|es|fr|de|it)$/.test(raw) ? raw : "");
+}
+
 function xmlText(fragment) {
   return String(fragment || "")
     .replace(/<[^>]+>/g, " ")
@@ -163,7 +169,7 @@ export async function onRequestGet({ request }) {
   }
   const c = crossrefData || {};
   const p = pubmedData || {};
-  const springerData = (!p.abstract && !c.abstract) ? await springerPage(doi) : null;
+  const springerData = await springerPage(doi);
   const authors = p.authors?.length ? p.authors : (c.authors || []);
   const metadata = {
     doi,
@@ -179,9 +185,9 @@ export async function onRequestGet({ request }) {
     series: c.series || "",
     url: c.url || "https://doi.org/" + doi,
     abstract: p.abstract || c.abstract || springerData?.abstract || "",
-    abstractLanguage: p.abstract || c.abstract || springerData?.abstract ? (p.language || c.language || "en") : "",
+    abstractLanguage: p.abstract || c.abstract || springerData?.abstract ? normalizeLanguage(p.language || c.language || "en") : "",
     keywords: (p.keywords || []).length ? p.keywords : (springerData?.keywords || []),
-    keywordLanguage: (p.keywords || []).length ? (p.language || c.language || "en") : (springerData?.keywordLanguage || ""),
+    keywordLanguage: (p.keywords || []).length ? normalizeLanguage(p.language || c.language || "en") : (springerData?.keywordLanguage || ""),
     crossrefSubjects: c.keywords || [],
     language: p.language || c.language || "",
     sources: [pubmedData ? "PubMed" : "", crossrefData ? "Crossref" : "", springerData?.abstract || springerData?.keywords?.length ? "Springer Nature" : ""].filter(Boolean),
