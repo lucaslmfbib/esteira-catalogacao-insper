@@ -116,8 +116,11 @@ async function springerPage(doi) {
       const start = heading.index + heading[0].length;
       const level = Number(heading[1]);
       const next = headings.slice(keywordHeading + 1).find(([, nextLevel]) => Number(nextLevel) <= level);
-      const block = xmlText(html.slice(start, next ? next.index : html.length));
-      headingKeywords = block.split(/[,;|]/).map(x => x.trim()).filter(Boolean);
+      const keywordSection = html.slice(start, next ? next.index : html.length);
+      const listTerms = [...keywordSection.matchAll(/<(?:li|dd)\\b[^>]*>([\\s\\S]*?)<\\/(?:li|dd)>/gi)]
+        .map(([, value]) => xmlText(value)).filter(Boolean);
+      const block = xmlText(keywordSection);
+      headingKeywords = listTerms.length ? listTerms : block.split(/[,;|]/).map(x => x.trim()).filter(Boolean);
     }
     const keywords = [...new Set([
       ...htmlMetaValues(html, "citation_keyword"),
