@@ -92,11 +92,17 @@ async function springerPage(doi) {
     const html = await response.text();
     let abstract = htmlMetaValues(html, "citation_abstract")[0] || "";
     if (!abstract) {
-      const blocks = [...html.matchAll(/<section\b[\s\S]*?<\/section>/gi)].map(([, block]) => block);
-      const block = blocks.find(value => /<h[1-6]\b[^>]*>\s*Abstract\s*<\/h[1-6]>/i.test(value));
-      if (block) abstract = xmlText(block);
+      const headings = [...html.matchAll(/<h([1-6])\b[^>]*>([\s\S]*?)<\/h\1>/gi)];
+      const index = headings.findIndex(([, level, content]) => xmlText(content).toLowerCase() === "abstract");
+      if (index >= 0) {
+        const heading = headings[index];
+        const start = heading.index + heading[0].length;
+        const level = Number(heading[1]);
+        const next = headings.slice(index + 1).find(([match, nextLevel]) => Number(nextLevel) <= level);
+        abstract = xmlText(html.slice(start, next ? next.index : html.length));
+      }
     }
-    if (!abstract) abstract = htmlMetaValues(html, "description").find(value => value.length > 120) || "";
+    if (!abstract) abstract = htmlMetaValues(html, "description").find(value => value.length > 300) || "";
     const keywords = [...new Set([
       ...htmlMetaValues(html, "citation_keyword"),
       ...htmlMetaValues(html, "citation_keywords")
