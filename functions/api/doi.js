@@ -103,11 +103,22 @@ async function springerPage(doi) {
     }
     if (abstract.length < 200) abstract = htmlMetaValues(html, "citation_abstract").find(value => value.length > 200) || abstract;
     if (abstract.length < 200) abstract = htmlMetaValues(html, "description").find(value => value.length > 300) || abstract;
+    const keywordHeading = headings.findIndex(([, level, content]) => /^(?:keywords?|key words?)$/i.test(xmlText(content)));
+    let headingKeywords = [];
+    if (keywordHeading >= 0) {
+      const heading = headings[keywordHeading];
+      const start = heading.index + heading[0].length;
+      const level = Number(heading[1]);
+      const next = headings.slice(keywordHeading + 1).find(([, nextLevel]) => Number(nextLevel) <= level);
+      const block = xmlText(html.slice(start, next ? next.index : html.length));
+      headingKeywords = block.split(/[,;|]/).map(x => x.trim()).filter(Boolean);
+    }
     const keywords = [...new Set([
       ...htmlMetaValues(html, "citation_keyword"),
-      ...htmlMetaValues(html, "citation_keywords")
+      ...htmlMetaValues(html, "citation_keywords"),
+      ...headingKeywords
     ].flatMap(value => value.split(/[,;|]/).map(x => x.trim()).filter(Boolean)))];
-    return { abstract: abstract.length > 100 ? abstract : "", keywords };
+    return { abstract: abstract.length > 100 ? abstract : "", keywords, keywordLanguage: keywords.length ? "en" : "" };
   } catch {
     return null;
   }
@@ -168,11 +179,12 @@ export async function onRequestGet({ request }) {
     series: c.series || "",
     url: c.url || "https://doi.org/" + doi,
     abstract: p.abstract || c.abstract || springerData?.abstract || "",
-    abstractLanguage: p.abstract || c.abstract || springerData?.abstract ? "en" : "",
+    abstractLanguage: p.abstract || c.abstract || springerData?.abstract ? (p.language || c.language || "en") : "",
     keywords: (p.keywords || []).length ? p.keywords : (springerData?.keywords || []),
+    keywordLanguage: (p.keywords || []).length ? (p.language || c.language || "en") : (springerData?.keywordLanguage || ""),
     crossrefSubjects: c.keywords || [],
     language: p.language || c.language || "",
-    sources: [pubmedData ? "PubMed" : "", crossrefData ? "Crossref" : "", springerData?.abstract ? "Springer Nature" : ""].filter(Boolean),
+    sources: [pubmedData ? "PubMed" : "", crossrefData ? "Crossref" : "", springerData?.abstract || springerData?.keywords?.length ? "Springer Nature" : ""].filter(Boolean),
     pmid: p.pmid || ""
   };
   return Response.json(
